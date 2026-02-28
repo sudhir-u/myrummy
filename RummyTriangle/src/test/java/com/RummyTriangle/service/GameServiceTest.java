@@ -2,6 +2,7 @@ package com.RummyTriangle.service;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 
 import java.util.ArrayList;
 
@@ -10,6 +11,7 @@ import org.junit.Test;
 
 import com.RummyTriangle.domain.CardGroup;
 import com.RummyTriangle.domain.Deck;
+import com.RummyTriangle.domain.GameState;
 import com.RummyTriangle.domain.PlayingCard;
 import com.RummyTriangle.domain.Ranks;
 import com.RummyTriangle.domain.RummyDoubleDeck;
@@ -213,15 +215,20 @@ public class GameServiceTest {
 		
 		game1.pullJoker();
 
-		//for (int i=0; i < handOfUser1.getCardCount(); i++)
-		//	System.out.println(handOfUser1.getAllCards().get(i).getDescription());
-		assertEquals(game1.getCardDeck().getCardCount(), 68);
+		// dealCards pulls 39 (13*3) + 1 (firstCard for discard), pullJoker pulls 1 = 41; 108-41=67
+		assertEquals(67, game1.getCardDeck().getCardCount());
 
 	}
 
 	@Test
-	public void test() {
-		
+	public void testGameStateAndStartPlay() {
+		assertEquals(GameState.LOBBY, game1.getState());
+		game1.dealCards();
+		assertEquals(GameState.DEAL, game1.getState());
+		game1.startPlay();
+		assertEquals(GameState.PLAY, game1.getState());
+		assertNotNull(game1.getDiscardSet().getOpenCard());
+		assertEquals(0, game1.getCurrentPlayerIndex());
 	}
 
 }

@@ -359,7 +359,8 @@ public class Handtest {
 		
 		assertEquals(1,h.getCardGroupCount());
 		assertEquals(CardGroupType.NONE,h.getCardGroupAtIndex(0).getType());
-		assertEquals(80,h.getPoints());
+		// A(10)+A(10)+5(5)+5(5) = 30 deadwood points
+		assertEquals(30,h.getPoints());
 		//assertEquals(CardGroupType.NONE,h.getCardGroupAtIndex(0).getType());
 
 	}
@@ -423,6 +424,8 @@ public class Handtest {
 		assertEquals(CardGroupType.PURE_SET,h.getCardGroupAtIndex(2).getType());
 		assertEquals(CardGroupType.PURE_SET,h.getCardGroupAtIndex(3).getType());
 
+		assertEquals(0, h.getPoints());
+		assertTrue(h.isRummy());
 	}
 
 	@Test

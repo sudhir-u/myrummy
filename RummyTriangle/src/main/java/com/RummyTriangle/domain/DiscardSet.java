@@ -26,20 +26,14 @@ public class DiscardSet {
 		return this.getCards().size() ;
 	}
 	
+	/** Removes and returns the top (most recently discarded) card. */
 	public PlayingCard pullOpenCard(){
-		
-		PlayingCard pc = cards.element();
-
-		cards.removeLast();
-		
-		return pc;
+		return cards.isEmpty() ? null : cards.removeLast();
 	}
 
+	/** Returns the top (most recently discarded) card without removing. */
 	public PlayingCard getOpenCard(){
-
-		PlayingCard pc = cards.element();
-		
-		return pc;
+		return cards.isEmpty() ? null : cards.getLast();
 	}
 
 }

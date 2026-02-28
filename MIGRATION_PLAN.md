@@ -90,12 +90,12 @@ Your domain logic is non-trivial and well-structured. Modernizing the existing J
 11. Add CORS config ✓ – CorsConfigurationSource in SecurityConfiguration
 12. DataSeeder – Creates admin/admin123 on first run if no users exist
 
-### Phase 3: Game Logic Completion
+### Phase 3: Game Logic Completion ✓ Implemented
 
-12. Implement `Hand.getPoints()` using `CardGroup.getPoints(jokerCardsSuperSet)`
-13. Add game state machine (LOBBY → DEAL → PLAY → DECLARE → SCORE)
-14. Implement discard-pile logic in game flow
-15. Add commission/winnings model – e.g. `Game.winnerCommission`, `Wallet` entity
+12. Implement `Hand.getPoints()` ✓ – sums deadwood from NONE groups via CardGroup.getPoints
+13. Add game state machine ✓ – GameState enum; GameService tracks LOBBY→DEAL→PLAY→DECLARE→SCORE
+14. Implement discard-pile logic ✓ – drawFromDeck, drawFromDiscard, discardToPile; DiscardSet fix (getLast)
+15. Add commission/winnings model ✓ – Wallet entity, GameResult, ScoringService (5% commission from winner)
 
 ### Phase 4: Real-Time & UI
 

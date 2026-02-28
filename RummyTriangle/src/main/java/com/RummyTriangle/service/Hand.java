@@ -3,10 +3,6 @@ package com.RummyTriangle.service;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
-
-import org.springframework.beans.factory.annotation.Autowired;
-
 import com.RummyTriangle.domain.CardGroup;
 import com.RummyTriangle.domain.CardGroupType;
 import com.RummyTriangle.domain.PlayingCard;
@@ -19,11 +15,6 @@ public class Hand {
 	
 	private ArrayList<CardGroup> cardGroups = new ArrayList<CardGroup>();
 	private ArrayList<PlayingCard> allSupportedjokers = new ArrayList<PlayingCard>();
-	
-	@Autowired 
-	private GameService gameService;
-
-	private enum CountState {CARD_DRAWN, NORMAL};
 	
 	
 //	private enum CardGroupStatus {IS_PURE_RUN, IS_VALID_RUN, IS_PURE_SET, IS_VALID_SET, IS_NONE};
@@ -63,7 +54,11 @@ public class Hand {
 	
 	public Hand(ArrayList<PlayingCard> allSupportedjokers){
 		super();
-		this.allSupportedjokers = allSupportedjokers;
+		this.allSupportedjokers = allSupportedjokers != null ? allSupportedjokers : new ArrayList<>();
+	}
+
+	public void setAllSupportedJokers(ArrayList<PlayingCard> jokers) {
+		this.allSupportedjokers = jokers != null ? jokers : new ArrayList<>();
 	}
 
 	private void getCardsFromGroupsIntoSingleArray(ArrayList<PlayingCard> cards) {
@@ -270,17 +265,20 @@ public class Hand {
 		return false;
 	}
 	
-	//TODO implement logic for calculating points for hand
+	/**
+	 * Calculates penalty points for the hand.
+	 * Valid groups (PURE_RUN, RUN, PURE_SET, SET) count 0; invalid groups (NONE) count their face points.
+	 * Call profile() first to ensure group types are up to date.
+	 */
 	public int getPoints(){
-		
-//		cardGroups.stream()
-//			.filter(cg -> cg.getType().equals(CardGroupType.NONE))
-//			//.collect(Collectors.toList());
-//			.forEach(cg -> {
-//				System.out.println(cg.getCards().toString());     
-//			}
-//			);
-		return 80;
+		profile();
+		int total = 0;
+		for (CardGroup cg : cardGroups) {
+			if (cg.getType() == CardGroupType.NONE) {
+				total += cg.getPoints(allSupportedjokers);
+			}
+		}
+		return total;
 	}
 	
 	//TODO implement logic for profiling for cards available
