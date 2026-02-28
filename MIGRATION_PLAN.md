@@ -82,12 +82,13 @@ Your domain logic is non-trivial and well-structured. Modernizing the existing J
 6. **Add BCryptPasswordEncoder** ✓ – Replaced `NoOpPasswordEncoder` (existing DB users need password re-hash or re-registration)
 7. **User table name** ✓ – Renamed from `T` to `app_user`
 
-### Phase 2: Security & Modernization
+### Phase 2: Security & Modernization ✓ Implemented
 
-8. Migrate to Spring Security 6 style (`SecurityFilterChain`)
-9. Align user storage – use `IUserRepository` for CRUD instead of `WebService`
-10. Add input validation (e.g. Jakarta Validation)
-11. Add CORS config if frontend will be separate
+8. Migrate to Spring Security 6 style (`SecurityFilterChain`) ✓ – SecurityConfiguration uses SecurityFilterChain (Spring Boot 2.7.18)
+9. Align user storage ✓ – UserManagementService + IUserRepository; WebService removed
+10. Add input validation ✓ – Jakarta Validation on User; GlobalExceptionHandler for validation errors
+11. Add CORS config ✓ – CorsConfigurationSource in SecurityConfiguration
+12. DataSeeder – Creates admin/admin123 on first run if no users exist
 
 ### Phase 3: Game Logic Completion
 

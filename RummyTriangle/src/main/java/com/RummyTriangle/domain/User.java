@@ -1,12 +1,12 @@
 package com.RummyTriangle.domain;
 
-import java.util.Date;
-
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 import javax.persistence.Table;
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.Size;
 
 @Entity
 @Table(name = "app_user")
@@ -81,10 +81,17 @@ public class User {
 	@Id
 	@GeneratedValue(strategy = GenerationType.AUTO)
 	private int id;
-	String userName;
-	String password;
-	boolean active;
-	String roles;
+
+	@NotBlank(message = "userName is required")
+	@Size(min = 2, max = 50)
+	private String userName;
+
+	private String password;
+
+	private boolean active = true;
+
+	@Size(max = 100)
+	private String roles;
 //	String emailAddress;
 //	String mobileNo;
 //	String firstName;

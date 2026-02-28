@@ -41,14 +41,10 @@ App runs at `http://localhost:8085`. Login via form (users must exist in DB with
 
 ### First-Time User Setup
 
-Authentication uses the `app_user` table. For a fresh DB, insert a user with BCrypt password. Example (password `admin`):
-
-```sql
-INSERT INTO app_user (user_name, password, active, roles) 
-VALUES ('admin', '$2a$10$...', true, 'ADMIN');
-```
-
-Use [BCrypt generator](https://bcrypt-generator.com/) to hash your password, then insert.
+On first run (empty DB), the app automatically creates an admin user:
+- **Username:** `admin`
+- **Password:** `admin123`  
+Change this password after first login. Set `app.seed-admin=false` to disable auto-seed.
 
 ## Project Structure
 

@@ -806,6 +806,29 @@ public class CardGroupTest {
 	}
 
 	@Test
+	public void testHasAllStandardCardsEmptyGroup() {
+		CardGroup cardGroup = new CardGroup();
+		assertFalse(cardGroup.hasAllStandardCards());
+	}
+
+	@Test
+	public void testHasAllStandardCardsGroupWithJoker() {
+		CardGroup cardGroup = new CardGroup();
+		cardGroup.addCard(new StandardPlayingCard(Suits.CLUBS, Ranks.ACE));
+		cardGroup.addCard(new StandardPlayingCard(Suits.CLUBS, Ranks.TWO));
+		cardGroup.addCard(new JokerPlayingCard());
+		assertFalse(cardGroup.hasAllStandardCards());
+	}
+
+	@Test
+	public void testHasAllStandardCardsAllStandardCards() {
+		CardGroup cardGroup = new CardGroup();
+		cardGroup.addCard(new StandardPlayingCard(Suits.CLUBS, Ranks.ACE));
+		cardGroup.addCard(new StandardPlayingCard(Suits.HEARTS, Ranks.TWO));
+		assertTrue(cardGroup.hasAllStandardCards());
+	}
+
+	@Test
 	public void testIsInvalidSetHasDuplicates() {
 
 		CardGroup cardGroup = new CardGroup();
