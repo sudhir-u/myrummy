@@ -1,0 +1,23 @@
+# Build
+target/
+*.class
+*.jar
+*.war
+
+# IDE
+.idea/
+*.iml
+.project
+.classpath
+.settings/
+
+# Local config (keep secrets out of repo)
+**/application-local.properties
+**/*-local.properties
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db

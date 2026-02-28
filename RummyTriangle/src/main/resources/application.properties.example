@@ -1,0 +1,11 @@
+# Copy to application.properties and set your values.
+# Prefer environment variables for production (SPRING_DATASOURCE_URL, etc.)
+
+server.port=8085
+
+spring.datasource.url=jdbc:postgresql://localhost:5432/myrummydb
+spring.datasource.username=myrole
+spring.datasource.password=YOUR_PASSWORD_HERE
+
+spring.jpa.hibernate.ddl-auto=update
+spring.jpa.hibernate.dialect=org.hibernate.dialect.PostgreSQL94Dialect
