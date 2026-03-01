@@ -58,6 +58,16 @@ RummyTriangle/
 └── pom.xml
 ```
 
+## Run with Docker
+
+```bash
+cd RummyTriangle && mvn package -DskipTests
+cd ..
+DB_PASSWORD=yourpassword docker-compose up -d
+```
+
+App at http://localhost:8085. Login, then go to **Play Rummy** or `/game.html`.
+
 ## Migration & Roadmap
 
 See **[MIGRATION_PLAN.md](MIGRATION_PLAN.md)** for:

@@ -26,8 +26,9 @@ public class SecurityConfiguration {
 			.cors(cors -> cors.configurationSource(corsConfigurationSource()))
 			.authorizeRequests(auth -> auth
 				.antMatchers("/admin").hasRole("ADMIN")
-				.antMatchers("/user", "/liveusers", "/users/**").hasAnyRole("USER", "ADMIN")
-				.antMatchers("/").permitAll()
+				.antMatchers("/user", "/liveusers", "/users/**", "/api/**", "/game/**").hasAnyRole("USER", "ADMIN")
+				.antMatchers("/ws/**", "/topic/**", "/app/**").permitAll()
+				.antMatchers("/", "/game.html", "/css/**", "/js/**").permitAll()
 			)
 			.formLogin(form -> form.defaultSuccessUrl("/user", true));
 		return http.build();

@@ -36,7 +36,7 @@ public class HomeResource {
 
 	@GetMapping("/user")
 	public String user() {
-		return "<h1>Welcome to Rummy Triangle User page</h1>";
+		return "<h1>Welcome to Rummy Triangle</h1><p><a href=\"/game.html\">Play Rummy</a></p>";
 	}
 
 	@GetMapping("/liveusers")

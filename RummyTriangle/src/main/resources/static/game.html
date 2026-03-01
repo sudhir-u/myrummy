@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rummy Triangle - Play</title>
+  <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; max-width: 600px; margin: 2rem auto; padding: 0 1rem; }
+    h1 { color: #1a5f4a; }
+    button { padding: 0.5rem 1rem; margin: 0.25rem; cursor: pointer; background: #1a5f4a; color: white; border: none; border-radius: 4px; }
+    button:hover { background: #237a62; }
+    button:disabled { background: #999; cursor: not-allowed; }
+    input { padding: 0.5rem; margin: 0.25rem 0; }
+    .card { display: inline-block; padding: 4px 8px; margin: 2px; background: #f5f5f5; border-radius: 4px; font-size: 0.9rem; }
+    #status { padding: 0.5rem; background: #e8f5e9; border-radius: 4px; margin: 0.5rem 0; }
+    #room-info { padding: 0.5rem; background: #e3f2fd; border-radius: 4px; margin: 0.5rem 0; }
+    .error { background: #ffebee; }
+  </style>
+</head>
+<body>
+  <h1>Rummy Triangle</h1>
+  <div id="status">Log in to play. <a href="/user">Login</a></div>
+  <div id="room-info" style="display:none;"></div>
+
+  <div id="lobby">
+    <h2>Lobby</h2>
+    <button id="btnCreate">Create Room</button>
+    <p>Or join: <input id="roomId" placeholder="room ID" /> <button id="btnJoin">Join</button></p>
+  </div>
+
+  <div id="game-area" style="display:none;">
+    <h2>Game</h2>
+    <p>Room: <span id="currentRoom"></span></p>
+    <p>Players: <span id="players"></span></p>
+    <button id="btnStart">Start Game</button>
+  </div>
+
+  <script>
+    let stompClient = null;
+    let currentRoomId = null;
+
+    function connect() {
+      const socket = new SockJS('/ws');
+      stompClient = Stomp.over(socket);
+      stompClient.connect({}, function() {
+        document.getElementById('status').textContent = 'Connected.';
+        stompClient.subscribe('/topic/game', onGameMessage);
+      }, function(err) {
+        document.getElementById('status').textContent = 'Connection failed.';
+        document.getElementById('status').classList.add('error');
+      });
+    }
+
+    function onGameMessage(msg) {
+      const data = JSON.parse(msg.body);
+      if (data.roomId === currentRoomId && data.state) {
+        document.getElementById('room-info').style.display = 'block';
+        document.getElementById('room-info').textContent = 'State: ' + data.state + ' | Players: ' + (data.playerNames ? data.playerNames.join(', ') : data.playerCount);
+      }
+    }
+
+    async function createRoom() {
+      try {
+        const r = await fetch('/api/game/create', { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ maxPlayers: 4 }) });
+        if (!r.ok) { alert('Login required'); return; }
+        const d = await r.json();
+        currentRoomId = d.roomId;
+        showGameArea(d.roomId);
+      } catch (e) { alert('Error: ' + e); }
+    }
+
+    async function joinRoom() {
+      const id = document.getElementById('roomId').value.trim();
+      if (!id) { alert('Enter room ID'); return; }
+      try {
+        const r = await fetch('/api/game/' + encodeURIComponent(id) + '/join', { method: 'POST', credentials: 'include' });
+        if (!r.ok) { alert('Login required'); return; }
+        const d = await r.json();
+        if (d.joined) {
+          currentRoomId = id;
+          showGameArea(id);
+        } else { alert('Could not join room'); }
+      } catch (e) { alert('Error: ' + e); }
+    }
+
+    function showGameArea(roomId) {
+      document.getElementById('lobby').style.display = 'none';
+      document.getElementById('game-area').style.display = 'block';
+      document.getElementById('currentRoom').textContent = roomId;
+      if (stompClient && stompClient.connected) {
+        stompClient.subscribe('/topic/room/' + roomId, function(m) {
+          const d = JSON.parse(m.body);
+          document.getElementById('players').textContent = d.playerNames ? d.playerNames.join(', ') : d.playerCount;
+        });
+      }
+      fetch('/api/game/' + roomId, { credentials: 'include' }).then(r => r.json()).then(d => {
+        document.getElementById('players').textContent = d.playerCount + ' players';
+      });
+    }
+
+    function startGame() {
+      if (!stompClient || !stompClient.connected || !currentRoomId) return;
+      stompClient.send('/app/game/start', {}, JSON.stringify({ roomId: currentRoomId }));
+    }
+
+    document.getElementById('btnCreate').onclick = createRoom;
+    document.getElementById('btnJoin').onclick = joinRoom;
+    document.getElementById('btnStart').onclick = startGame;
+
+    connect();
+  </script>
+</body>
+</html>

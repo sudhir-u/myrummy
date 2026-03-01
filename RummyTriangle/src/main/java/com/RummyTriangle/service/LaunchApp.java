@@ -2,11 +2,13 @@ package com.RummyTriangle.service;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.ComponentScan;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
 import com.RummyTriangle.domain.IUserRepository;
 
 @SpringBootApplication
+@ComponentScan(basePackages = "com.RummyTriangle")
 @EnableJpaRepositories(basePackageClasses = IUserRepository.class)
 public class LaunchApp {
 

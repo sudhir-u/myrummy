@@ -97,12 +97,12 @@ Your domain logic is non-trivial and well-structured. Modernizing the existing J
 14. Implement discard-pile logic ✓ – drawFromDeck, drawFromDiscard, discardToPile; DiscardSet fix (getLast)
 15. Add commission/winnings model ✓ – Wallet entity, GameResult, ScoringService (5% commission from winner)
 
-### Phase 4: Real-Time & UI
+### Phase 4: Real-Time & UI ✓ Implemented
 
-16. Add Spring WebSocket + STOMP
-17. Game room / matchmaking service
-18. Frontend (React/Vue) or server-rendered (Thymeleaf) UI
-19. Mobile-responsive design
+16. Add Spring WebSocket + STOMP ✓ – WebSocketConfig, /ws endpoint
+17. Game room / matchmaking service ✓ – GameRoomService (create/join rooms)
+18. Frontend ✓ – static/game.html with SockJS + STOMP (create room, join, start)
+19. Docker ✓ – Dockerfile + docker-compose (app + PostgreSQL)
 
 ---
 

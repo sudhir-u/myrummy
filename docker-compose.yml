@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:14-alpine
+    environment:
+      POSTGRES_DB: myrummydb
+      POSTGRES_USER: myrole
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U myrole -d myrummydb"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: ./RummyTriangle
+    ports:
+      - "8085:8085"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/myrummydb
+      SPRING_DATASOURCE_USERNAME: myrole
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASSWORD:-changeme}
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:
