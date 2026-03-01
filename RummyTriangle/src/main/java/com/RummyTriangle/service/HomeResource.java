@@ -1,6 +1,7 @@
 package com.RummyTriangle.service;
 
 import java.util.List;
+import java.util.Map;
 
 import javax.validation.Valid;
 
@@ -61,5 +62,21 @@ public class HomeResource {
 		return userManagementService.updateUser(userName, user)
 				.map(ResponseEntity::ok)
 				.orElse(ResponseEntity.notFound().build());
+	}
+
+	/**
+	 * Reset password for a user (admin only). Use after manual DB insert with wrong BCrypt hash.
+	 * Body: { "password": "newpassword" } (min 6 chars).
+	 */
+	@PutMapping("/users/{userName}/password")
+	public ResponseEntity<?> resetPassword(@PathVariable("userName") String userName, @RequestBody Map<String, String> body) {
+		String password = body != null ? body.get("password") : null;
+		try {
+			return userManagementService.resetPassword(userName, password)
+					.map(u -> ResponseEntity.ok().body(Map.of("ok", true, "message", "Password updated for " + userName)))
+					.orElse(ResponseEntity.notFound().build());
+		} catch (IllegalArgumentException e) {
+			return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+		}
 	}
 }

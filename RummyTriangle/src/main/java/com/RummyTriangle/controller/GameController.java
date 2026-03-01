@@ -77,6 +77,34 @@ public class GameController {
 				.orElse(ResponseEntity.notFound().build());
 	}
 
+	@PostMapping("/api/game/{roomId}/start")
+	@ResponseBody
+	public ResponseEntity<Map<String, Object>> startGameRest(Principal principal, @PathVariable String roomId) {
+		if (principal == null) {
+			return ResponseEntity.status(401).build();
+		}
+		Map<String, Object> out = new HashMap<>();
+		out.put("roomId", roomId);
+		out.put("type", "start");
+		return gameRoomService.getRoom(roomId)
+				.map(game -> {
+					try {
+						game.dealCards();
+						game.startPlay();
+						gameRoomService.broadcastRoomState(roomId, game);
+						out.put("success", true);
+						out.put("state", game.getState().name());
+						out.put("playerCount", game.getPlayerCount());
+						return ResponseEntity.ok(out);
+					} catch (Exception e) {
+						out.put("success", false);
+						out.put("error", e.getMessage());
+						return ResponseEntity.ok(out);
+					}
+				})
+				.orElse(ResponseEntity.notFound().build());
+	}
+
 	@MessageMapping("/game/start")
 	@SendTo("/topic/game")
 	public Map<String, Object> startGame(Principal principal, Map<String, String> payload) {

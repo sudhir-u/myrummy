@@ -12,8 +12,9 @@ import com.RummyTriangle.domain.IUserRepository;
 import com.RummyTriangle.domain.User;
 
 /**
- * Seeds an admin user (admin/admin123) if no users exist.
- * Set app.seed-admin=false to disable.
+ * Ensures default users exist on every startup: admin (admin/admin123), alice (alice/alice123), bob (bob/bob123).
+ * Creates only if missing, so existing DB users are left unchanged.
+ * Set app.seed-users=false to disable.
  */
 @Component
 @Order(1)
@@ -25,18 +26,37 @@ public class DataSeeder implements ApplicationRunner {
 	@Autowired
 	private PasswordEncoder passwordEncoder;
 
-	@Value("${app.seed-admin:true}")
-	private boolean seedAdmin;
+	@Value("${app.seed-users:true}")
+	private boolean seedUsers;
 
 	@Override
 	public void run(ApplicationArguments args) {
-		if (!seedAdmin || userRepository.count() > 0) {
+		if (!seedUsers) {
 			return;
 		}
-		User admin = new User("admin");
-		admin.setPassword(passwordEncoder.encode("admin123"));
-		admin.setActive(true);
-		admin.setRoles("ADMIN,USER");
-		userRepository.save(admin);
+		// Admin — create only if not present
+		userRepository.findByUserName("admin").orElseGet(() -> {
+			User u = new User("admin");
+			u.setPassword(passwordEncoder.encode("admin123"));
+			u.setActive(true);
+			u.setRoles("ADMIN,USER");
+			return userRepository.save(u);
+		});
+		// Alice — create only if not present
+		userRepository.findByUserName("alice").orElseGet(() -> {
+			User u = new User("alice");
+			u.setPassword(passwordEncoder.encode("alice123"));
+			u.setActive(true);
+			u.setRoles("USER");
+			return userRepository.save(u);
+		});
+		// Bob — create only if not present
+		userRepository.findByUserName("bob").orElseGet(() -> {
+			User u = new User("bob");
+			u.setPassword(passwordEncoder.encode("bob123"));
+			u.setActive(true);
+			u.setRoles("USER");
+			return userRepository.save(u);
+		});
 	}
 }

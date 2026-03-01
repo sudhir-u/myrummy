@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Rummy Triangle - Play</title>
   <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@6/bundles/stomp.umd.min.js"></script>
   <style>
     * { box-sizing: border-box; }
     body { font-family: system-ui, sans-serif; max-width: 600px; margin: 2rem auto; padding: 0 1rem; }
@@ -14,7 +14,10 @@
     button:hover { background: #237a62; }
     button:disabled { background: #999; cursor: not-allowed; }
     input { padding: 0.5rem; margin: 0.25rem 0; }
-    .card { display: inline-block; padding: 4px 8px; margin: 2px; background: #f5f5f5; border-radius: 4px; font-size: 0.9rem; }
+    .card { display: inline-block; padding: 6px 10px; margin: 4px; background: #fff; border: 1px solid #ccc; border-radius: 6px; font-size: 0.9rem; }
+    .card.discardable { cursor: pointer; background: #e3f2fd; }
+    .card.discardable:hover { background: #bbdefb; border-color: #1a5f4a; }
+    .hand-container { min-height: 2rem; }
     #status { padding: 0.5rem; background: #e8f5e9; border-radius: 4px; margin: 0.5rem 0; }
     #room-info { padding: 0.5rem; background: #e3f2fd; border-radius: 4px; margin: 0.5rem 0; }
     .error { background: #ffebee; }
@@ -35,30 +38,92 @@
     <h2>Game</h2>
     <p>Room: <span id="currentRoom"></span></p>
     <p>Players: <span id="players"></span></p>
+    <p id="game-state-msg" style="margin: 0.5rem 0; font-weight: bold;"></p>
     <button id="btnStart">Start Game</button>
+
+    <div id="play-area" style="display:none; margin-top: 1rem;">
+      <h3>Play</h3>
+      <p id="turn-msg"></p>
+      <div id="draw-buttons" style="margin: 0.5rem 0;">
+        <button id="btnDrawDeck">Draw from deck</button>
+        <button id="btnDrawDiscard">Draw from discard pile</button>
+      </div>
+      <p id="discard-hint" style="display:none; font-style: italic;">Click a card below to discard it.</p>
+      <p><strong>Top of discard pile:</strong> <span id="discard-top">—</span></p>
+      <h3>Your hand</h3>
+      <div id="hand-cards" class="hand-container"></div>
+      <div style="margin-top: 0.5rem;">
+        <button id="btnDeclare">Declare (win)</button>
+      </div>
+      <div id="declare-result" style="display:none; margin-top: 1rem; padding: 0.5rem; background: #e8f5e9; border-radius: 4px;"></div>
+    </div>
   </div>
 
   <script>
     let stompClient = null;
     let currentRoomId = null;
+    let wasConnected = false;
+    let roomSubscription = null;
+
+    function onRoomMessage(m) {
+      const d = JSON.parse(m.body);
+      document.getElementById('players').textContent = d.playerNames ? d.playerNames.join(', ') : (d.playerCount != null ? d.playerCount + ' players' : '');
+      if (d.state === 'PLAY' || d.state === 'SCORE' || d.state === 'FINISHED') {
+        document.getElementById('play-area').style.display = 'block';
+        document.getElementById('btnStart').textContent = 'Started';
+        document.getElementById('btnStart').disabled = true;
+        document.getElementById('game-state-msg').textContent = d.state === 'PLAY' ? 'Game in progress — draw, meld, or declare.' : 'Game over.';
+        refreshPlayState();
+      }
+    }
+
+    function subscribeToRoom(roomId) {
+      if (!stompClient || !stompClient.connected || !roomId) return;
+      if (roomSubscription) roomSubscription.unsubscribe();
+      roomSubscription = stompClient.subscribe('/topic/room/' + roomId, onRoomMessage);
+    }
 
     function connect() {
-      const socket = new SockJS('/ws');
-      stompClient = Stomp.over(socket);
+      const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:';
+      const wsUrl = protocol + '//' + window.location.host + '/ws';
+      const socket = new SockJS(wsUrl);
+      stompClient = StompJs.Stomp.over(socket);
+      stompClient.debug = null;
       stompClient.connect({}, function() {
+        wasConnected = true;
         document.getElementById('status').textContent = 'Connected.';
+        document.getElementById('status').classList.remove('error');
         stompClient.subscribe('/topic/game', onGameMessage);
+        if (currentRoomId) subscribeToRoom(currentRoomId);
       }, function(err) {
-        document.getElementById('status').textContent = 'Connection failed.';
+        console.error('STOMP error', err);
+        document.getElementById('status').textContent = 'Connection failed. Refresh or check console (F12).';
         document.getElementById('status').classList.add('error');
       });
+      socket.onclose = function() {
+        if (wasConnected) {
+          document.getElementById('status').textContent = 'Disconnected. Reconnecting...';
+          document.getElementById('status').classList.add('error');
+          setTimeout(connect, 2000);
+        }
+      };
     }
 
     function onGameMessage(msg) {
       const data = JSON.parse(msg.body);
-      if (data.roomId === currentRoomId && data.state) {
+      if (data.roomId === currentRoomId) {
         document.getElementById('room-info').style.display = 'block';
-        document.getElementById('room-info').textContent = 'State: ' + data.state + ' | Players: ' + (data.playerNames ? data.playerNames.join(', ') : data.playerCount);
+        document.getElementById('room-info').textContent = 'State: ' + (data.state || '?') + (data.playerNames ? ' | Players: ' + data.playerNames.join(', ') : '');
+        if (data.playerNames) document.getElementById('players').textContent = data.playerNames.join(', ');
+        if (data.success) {
+          document.getElementById('btnStart').textContent = 'Started';
+          document.getElementById('btnStart').disabled = true;
+          document.getElementById('game-state-msg').textContent = 'Game in progress — draw, meld, or declare.';
+        }
+        if (data.state === 'PLAY') {
+          document.getElementById('play-area').style.display = 'block';
+          refreshPlayState();
+        }
       }
     }
 
@@ -87,28 +152,171 @@
     }
 
     function showGameArea(roomId) {
+      currentRoomId = roomId;
       document.getElementById('lobby').style.display = 'none';
       document.getElementById('game-area').style.display = 'block';
       document.getElementById('currentRoom').textContent = roomId;
-      if (stompClient && stompClient.connected) {
-        stompClient.subscribe('/topic/room/' + roomId, function(m) {
-          const d = JSON.parse(m.body);
-          document.getElementById('players').textContent = d.playerNames ? d.playerNames.join(', ') : d.playerCount;
-        });
-      }
+      subscribeToRoom(roomId);
       fetch('/api/game/' + roomId, { credentials: 'include' }).then(r => r.json()).then(d => {
         document.getElementById('players').textContent = d.playerCount + ' players';
+        if (d.state === 'PLAY' || d.state === 'SCORE' || d.state === 'FINISHED') {
+          document.getElementById('play-area').style.display = 'block';
+          document.getElementById('btnStart').textContent = 'Started';
+          document.getElementById('btnStart').disabled = true;
+          document.getElementById('game-state-msg').textContent = d.state === 'PLAY' ? 'Game in progress — draw, meld, or declare.' : 'Game over.';
+          refreshPlayState();
+        }
       });
     }
 
-    function startGame() {
-      if (!stompClient || !stompClient.connected || !currentRoomId) return;
-      stompClient.send('/app/game/start', {}, JSON.stringify({ roomId: currentRoomId }));
+    async function refreshPlayState() {
+      if (!currentRoomId) return;
+      try {
+        const [turnRes, handRes, discardRes] = await Promise.all([
+          fetch('/api/game/' + encodeURIComponent(currentRoomId) + '/turn', { credentials: 'include' }),
+          fetch('/api/game/' + encodeURIComponent(currentRoomId) + '/hand', { credentials: 'include' }),
+          fetch('/api/game/' + encodeURIComponent(currentRoomId) + '/discard-top', { credentials: 'include' })
+        ]);
+        const turn = turnRes.ok ? await turnRes.json() : {};
+        const hand = handRes.ok ? await handRes.json() : { cards: [] };
+        const discardTop = discardRes.ok ? await discardRes.json() : {};
+        const isMyTurn = turn.isYourTurn === true;
+        const mustDiscard = turn.mustDiscard === true;
+        const canDraw = turn.canDraw === true;
+        const gameOver = turn.state === 'SCORE' || turn.state === 'FINISHED';
+
+        document.getElementById('turn-msg').textContent = gameOver
+          ? 'Game over.'
+          : (isMyTurn
+          ? (mustDiscard           ? "Your turn — choose a card to discard." : "Your turn — draw from deck or discard pile.")
+          : (turn.currentPlayerName ? turn.currentPlayerName + "'s turn" : "Waiting for other players."));
+        document.getElementById('draw-buttons').style.display = (canDraw && !gameOver) ? 'block' : 'none';
+        document.getElementById('btnDrawDeck').disabled = !canDraw;
+        document.getElementById('btnDrawDiscard').disabled = !canDraw;
+        document.getElementById('discard-hint').style.display = (mustDiscard && !gameOver) ? 'block' : 'none';
+        document.getElementById('discard-top').textContent = discardTop.description || '—';
+        document.getElementById('btnDeclare').disabled = !isMyTurn || gameOver;
+
+        const container = document.getElementById('hand-cards');
+        container.innerHTML = '';
+        (hand.cards || []).forEach(function(c) {
+          const el = document.createElement('span');
+          el.className = 'card';
+          el.textContent = c.rank && c.suit ? c.rank + ' ' + c.suit.charAt(0) : (c.description || '?');
+          el.dataset.groupIndex = c.groupIndex;
+          el.dataset.cardIndex = c.cardIndex;
+          if (mustDiscard && !gameOver) {
+            el.classList.add('discardable');
+            el.onclick = function() { doDiscard(parseInt(el.dataset.groupIndex, 10), parseInt(el.dataset.cardIndex, 10)); };
+          }
+          container.appendChild(el);
+        });
+      } catch (e) { console.error('refreshPlayState', e); }
+    }
+
+    async function doDrawDeck() {
+      if (!currentRoomId) return;
+      const btn = document.getElementById('btnDrawDeck');
+      btn.disabled = true;
+      try {
+        const r = await fetch('/api/game/' + encodeURIComponent(currentRoomId) + '/draw/deck', { method: 'POST', credentials: 'include' });
+        const d = await r.json();
+        if (d.success) await refreshPlayState();
+        else if (r.status === 403) await refreshPlayState();
+      } finally { await refreshPlayState(); }
+    }
+
+    async function doDrawDiscard() {
+      if (!currentRoomId) return;
+      const btn = document.getElementById('btnDrawDiscard');
+      btn.disabled = true;
+      try {
+        const r = await fetch('/api/game/' + encodeURIComponent(currentRoomId) + '/draw/discard', { method: 'POST', credentials: 'include' });
+        const d = await r.json();
+        if (d.success) await refreshPlayState();
+        else if (r.status === 403) await refreshPlayState();
+      } finally { await refreshPlayState(); }
+    }
+
+    async function doDiscard(groupIndex, cardIndex) {
+      if (!currentRoomId) return;
+      try {
+        const r = await fetch('/api/game/' + encodeURIComponent(currentRoomId) + '/discard', {
+          method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ groupIndex: groupIndex, cardIndex: cardIndex })
+        });
+        const d = await r.json();
+        if (d.success) await refreshPlayState();
+      } catch (e) { console.error(e); }
+      await refreshPlayState();
+    }
+
+    async function doDeclare() {
+      if (!currentRoomId) return;
+      const resultEl = document.getElementById('declare-result');
+      resultEl.style.display = 'none';
+      try {
+        const r = await fetch('/api/game/' + encodeURIComponent(currentRoomId) + '/declare', { method: 'POST', credentials: 'include' });
+        const d = await r.json();
+        resultEl.style.display = 'block';
+        resultEl.style.background = d.success ? '#e8f5e9' : '#ffebee';
+        if (d.success) {
+          resultEl.innerHTML = '<strong>' + (d.message || 'You declared!') + '</strong>';
+          if (d.result && d.result.playerScores) {
+            const list = d.result.playerScores.map(function(ps) {
+              return ps.userName + ': ' + ps.points + ' pts, ' + (ps.winningsCents >= 0 ? '+' : '') + (ps.winningsCents / 100) + ' (winner: ' + ps.winner + ')';
+            }).join('<br>');
+            resultEl.innerHTML += '<br>' + list;
+          }
+        } else {
+          resultEl.textContent = d.error || 'Declare failed.';
+        }
+      } catch (e) {
+        resultEl.style.display = 'block';
+        resultEl.style.background = '#ffebee';
+        resultEl.textContent = 'Error: ' + e;
+      }
+    }
+
+    async function startGame() {
+      if (!currentRoomId) return;
+      var btn = document.getElementById('btnStart');
+      btn.disabled = true;
+      btn.textContent = 'Starting...';
+      if (stompClient && stompClient.connected) {
+        stompClient.send('/app/game/start', {}, JSON.stringify({ roomId: currentRoomId }));
+        btn.textContent = 'Start Game';
+        btn.disabled = false;
+        return;
+      }
+      try {
+        const r = await fetch('/api/game/' + encodeURIComponent(currentRoomId) + '/start', { method: 'POST', credentials: 'include' });
+        var d = await r.json();
+        if (d.success) {
+          document.getElementById('room-info').style.display = 'block';
+          document.getElementById('room-info').textContent = 'Game started! State: ' + (d.state || 'PLAY');
+          document.getElementById('players').textContent = d.playerCount + ' players';
+          document.getElementById('game-state-msg').textContent = 'Game in progress — draw, meld, or declare.';
+          document.getElementById('btnStart').textContent = 'Started';
+          document.getElementById('btnStart').disabled = true;
+          document.getElementById('play-area').style.display = 'block';
+          refreshPlayState();
+        } else {
+          alert(d.error || 'Could not start game');
+        }
+      } catch (e) {
+        alert('Error: ' + e);
+      }
+      btn.textContent = 'Start Game';
+      btn.disabled = false;
     }
 
     document.getElementById('btnCreate').onclick = createRoom;
     document.getElementById('btnJoin').onclick = joinRoom;
     document.getElementById('btnStart').onclick = startGame;
+    document.getElementById('btnDrawDeck').onclick = doDrawDeck;
+    document.getElementById('btnDrawDiscard').onclick = doDrawDiscard;
+    document.getElementById('btnDeclare').onclick = doDeclare;
 
     connect();
   </script>

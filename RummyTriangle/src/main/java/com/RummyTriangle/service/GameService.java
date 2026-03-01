@@ -5,6 +5,7 @@ import java.util.logging.Logger;
 
 import org.springframework.beans.factory.annotation.Autowired;
 
+import com.RummyTriangle.domain.CardGroup;
 import com.RummyTriangle.domain.Deck;
 import com.RummyTriangle.domain.DiscardSet;
 import com.RummyTriangle.domain.GameState;
@@ -25,6 +26,7 @@ public class GameService implements IGameService{
 	private DiscardSet discardSet = new DiscardSet();
 	private PlayingCard jokerCard;
 	private int currentPlayerIndex;
+	private boolean currentPlayerMustDiscard;  // true after current player has drawn, until they discard
 	private PlayingCard firstCardFromDeck;  // Card to seed discard pile at game start
 
 	public GameService() {
@@ -117,8 +119,69 @@ public class GameService implements IGameService{
 			discardSet.addCard(firstCardFromDeck);
 		}
 		currentPlayerIndex = 0;
+		currentPlayerMustDiscard = false;
 		state = GameState.PLAY;
 		logger.info("Game in PLAY state. Current player: " + (getCurrentPlayer() != null ? getCurrentPlayer().getUser().getUserName() : "none"));
+	}
+
+	public boolean isCurrentPlayerMustDiscard() {
+		return currentPlayerMustDiscard;
+	}
+
+	/** Returns player index for the given username, or -1. */
+	public int getPlayerIndexByUsername(String userName) {
+		for (int i = 0; i < players.size(); i++) {
+			if (players.get(i).getUser() != null && userName.equals(players.get(i).getUser().getUserName())) {
+				return i;
+			}
+		}
+		return -1;
+	}
+
+	/** Current player draws from deck; card is added to their hand. Returns the drawn card description or null. */
+	public String drawFromDeckForCurrentPlayer() {
+		if (currentPlayerMustDiscard || state != GameState.PLAY) return null;
+		PlayingCard card = drawFromDeck();
+		if (card == null) return null;
+		Player current = getCurrentPlayer();
+		if (current != null && current.getHand() != null) {
+			current.getHand().addCard(card);
+			currentPlayerMustDiscard = true;
+			return card.getDescription();
+		}
+		return null;
+	}
+
+	/** Current player draws top card from discard pile; card is added to their hand. Returns the drawn card description or null. */
+	public String drawFromDiscardForCurrentPlayer() {
+		if (currentPlayerMustDiscard || state != GameState.PLAY) return null;
+		PlayingCard card = drawFromDiscard();
+		if (card == null) return null;
+		Player current = getCurrentPlayer();
+		if (current != null && current.getHand() != null) {
+			current.getHand().addCard(card);
+			currentPlayerMustDiscard = true;
+			return card.getDescription();
+		}
+		return null;
+	}
+
+	/** Current player discards a card by groupIndex and cardIndexInGroup. Returns true if successful. */
+	public boolean discardFromCurrentPlayer(int groupIndex, int cardIndexInGroup) {
+		if (!currentPlayerMustDiscard || state != GameState.PLAY) return false;
+		Player current = getCurrentPlayer();
+		if (current == null || current.getHand() == null) return false;
+		Hand hand = current.getHand();
+		if (groupIndex < 0 || groupIndex >= hand.getCardGroupCount()) return false;
+		CardGroup group = hand.getCardGroupAtIndex(groupIndex);
+		if (cardIndexInGroup < 0 || cardIndexInGroup >= group.getCardCount()) return false;
+		PlayingCard card = hand.discardCard(groupIndex, cardIndexInGroup);
+		if (card != null) {
+			discardToPile(card);
+			currentPlayerMustDiscard = false;
+			return true;
+		}
+		return false;
 	}
 
 	/** Draw from deck (top card). Returns null if deck empty. */

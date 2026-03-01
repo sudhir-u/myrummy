@@ -60,4 +60,16 @@ public class UserManagementService {
 				return userRepository.save(existing);
 			});
 	}
+
+	/** Reset password for a user (e.g. after manual DB insert with wrong hash). Min 6 characters. */
+	public Optional<User> resetPassword(String userName, String newPassword) {
+		if (newPassword == null || newPassword.length() < 6) {
+			throw new IllegalArgumentException("Password must be at least 6 characters");
+		}
+		return userRepository.findByUserName(userName)
+			.map(u -> {
+				u.setPassword(passwordEncoder.encode(newPassword));
+				return userRepository.save(u);
+			});
+	}
 }

@@ -59,13 +59,18 @@ public class GameRoomService {
 	}
 
 	public void broadcastRoomState(String roomId, GameService game) {
+		String[] playerNames = game.getPlayers().stream()
+				.map(pl -> pl.getUser() != null ? pl.getUser().getUserName() : "?")
+				.toArray(String[]::new);
+		com.RummyTriangle.service.Player current = game.getState() == GameState.PLAY ? game.getCurrentPlayer() : null;
 		messagingTemplate.convertAndSend("/topic/room/" + roomId, new RoomStatePayload(
 				roomId,
 				game.getState().name(),
 				game.getPlayerCount(),
-				game.getPlayers().stream()
-						.map(pl -> pl.getUser() != null ? pl.getUser().getUserName() : "?")
-						.toArray(String[]::new)
+				playerNames,
+				current != null ? game.getCurrentPlayerIndex() : null,
+				current != null && current.getUser() != null ? current.getUser().getUserName() : null,
+				game.getState() == GameState.PLAY && game.isCurrentPlayerMustDiscard()
 		));
 	}
 
@@ -74,12 +79,19 @@ public class GameRoomService {
 		public String state;
 		public int playerCount;
 		public String[] playerNames;
+		public Integer currentPlayerIndex;
+		public String currentPlayerName;
+		public Boolean mustDiscard;
 
-		public RoomStatePayload(String roomId, String state, int playerCount, String[] playerNames) {
+		public RoomStatePayload(String roomId, String state, int playerCount, String[] playerNames,
+				Integer currentPlayerIndex, String currentPlayerName, Boolean mustDiscard) {
 			this.roomId = roomId;
 			this.state = state;
 			this.playerCount = playerCount;
 			this.playerNames = playerNames;
+			this.currentPlayerIndex = currentPlayerIndex;
+			this.currentPlayerName = currentPlayerName;
+			this.mustDiscard = mustDiscard;
 		}
 	}
 }

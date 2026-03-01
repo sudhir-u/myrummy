@@ -41,10 +41,17 @@ App runs at `http://localhost:8085`. Login via form (users must exist in DB with
 
 ### First-Time User Setup
 
-On first run (empty DB), the app automatically creates an admin user:
-- **Username:** `admin`
-- **Password:** `admin123`  
-Change this password after first login. Set `app.seed-admin=false` to disable auto-seed.
+On first run (empty DB), the app automatically creates three users for testing:
+
+| Username | Password   | Use |
+|----------|------------|-----|
+| `admin`  | `admin123` | Admin; can create/start games |
+| `alice`  | `alice123` | Test player (e.g. Browser 1) |
+| `bob`    | `bob123`   | Test player (e.g. Browser 2) |
+
+**Two-browser test:** Log in as `alice` in one browser and `bob` in another. One creates a room, the other joins with the room ID; then either can start the game and take turns (draw, discard, declare).
+
+Change passwords after first login. Set `app.seed-users=false` to disable auto-seed.
 
 ## Project Structure
 
